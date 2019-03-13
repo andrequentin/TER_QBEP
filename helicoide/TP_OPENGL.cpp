@@ -59,6 +59,7 @@ int main(int argc, char **argv)
   // des arguments sur la ligne de commande
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_RGBA);
+  glutInitDisplayMode(GLUT_DEPTH);
 
   // d�finition et cr�ation de la fen�tre graphique, ainsi que son titre
   glutInitWindowSize(WIDTH, HEIGHT);
@@ -122,7 +123,7 @@ void init_scene()
 
 glEnable(GL_DEPTH_TEST);
 //glEnable(GL_TEXTURE_2D);
-glDepthFunc(GL_ALWAYS);  
+
 }
 
 // fonction de call-back pour l�affichage dans la fen�tre
