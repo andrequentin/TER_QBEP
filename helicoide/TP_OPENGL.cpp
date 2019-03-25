@@ -737,9 +737,22 @@ Point * ps = new Point[u];
 double angle=((2*PI)/u);
 
 
-  for(unsigned int i=0; i < u; ++i) {
+  for(unsigned int i=0; i < u; i++) {
     double x=(rayon * cos(angle * i));
     double y=(rayon * sin(angle * i));
+    ps[i]=* new Point(centre.getx()+x, centre.gety()+y ,centre.getz()+hauteur*i/u);
+    //angle+=angle;
+  }
+return ps;
+}
+Point * CalculHelice(Point centre,double rayon,double hauteur,int rotations,int u){
+
+Point * ps = new Point[u];
+double angle=((2*PI)/u);
+
+  for(unsigned int i=0; i < u; i++) {
+    double x=(rayon * cos(angle * i*rotations));
+    double y=(rayon * sin(angle * i*rotations));
     ps[i]=* new Point(centre.getx()+x, centre.gety()+y ,centre.getz()+hauteur*i/u);
     //angle+=angle;
   }
@@ -764,8 +777,8 @@ void render_scene(){
 // DrawSommetsCyl_Con(CalculSommetsCone(* new Point(0,0,0),5.0,10.0,nmed),nmed);
 //
  DrawSphere(* new Point(0,0,3), 3.0 , nmed,npar) ;
-int uu=10;
-Point * ps=CalculHelice(* new Point(0,0,0),5.0,6.0,uu);
+int uu=100;
+Point * ps=CalculHelice(* new Point(0,0,0),5.0,6.0,2,uu);
 glColor3f(1.0,0.0,1.0);
 for(int i = 0;i<uu-1;i++){
   glBegin(GL_LINES);
