@@ -1,0 +1,10 @@
+Source :
+ https://www.developpez.net/forums/d1046954/applications/sig-systeme-d-information-geographique/ajouter-distance-coordonnee-gps/
+ https://fr.wikipedia.org/wiki/Coordonn%C3%A9es_polaires
+
+
+p1.lat = 43.636947299999996
+p1.long = 3.8485947999999994
+
+distancemetre = 10
+direction = 0 (Nord)
