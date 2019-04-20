@@ -29,6 +29,10 @@ import dji.common.camera.SystemState;
 import dji.common.error.DJIError;
 import dji.common.flightcontroller.FlightControllerState;
 import dji.common.flightcontroller.LocationCoordinate3D;
+import dji.common.flightcontroller.virtualstick.FlightCoordinateSystem;
+import dji.common.flightcontroller.virtualstick.RollPitchControlMode;
+import dji.common.flightcontroller.virtualstick.VerticalControlMode;
+import dji.common.flightcontroller.virtualstick.YawControlMode;
 import dji.common.mission.waypoint.WaypointAction;
 import dji.common.mission.waypoint.WaypointActionType;
 import dji.common.mission.waypoint.WaypointMissionGotoWaypointMode;
@@ -41,6 +45,7 @@ import dji.sdk.base.BaseProduct;
 import dji.sdk.camera.Camera;
 import dji.sdk.camera.VideoFeeder;
 import dji.sdk.codec.DJICodecManager;
+import dji.sdk.flightcontroller.Compass;
 import dji.sdk.useraccount.UserAccountManager;
 import dji.common.mission.waypoint.Waypoint;
 import dji.common.mission.waypoint.WaypointMission;
@@ -63,7 +68,7 @@ import dji.sdk.useraccount.UserAccountManager;
 import static dji.keysdk.FlightControllerKey.AIRCRAFT_LOCATION_LATITUDE;
 import static dji.keysdk.FlightControllerKey.AIRCRAFT_LOCATION_LONGITUDE;
 
-public class MainActivity extends Activity implements SurfaceTextureListener,OnClickListener {
+public class MainActivity extends Activity implements SurfaceTextureListener, View.OnClickListener {
 
     private static final String TAG = MainActivity.class.getName();
     protected VideoFeeder.VideoDataListener mReceivedVideoDataListener = null;
@@ -72,8 +77,7 @@ public class MainActivity extends Activity implements SurfaceTextureListener,OnC
     protected DJICodecManager mCodecManager = null;
 
     protected TextureView mVideoSurface = null;
-    private Button mCaptureBtn, mWaypointMissionBtn, mStopBtn;
-    private ToggleButton mRecordBtn;
+    private Button mTakeOff, mLanding, mWaypointMissionBtn, mStopBtn;
 
     private Handler handler;
 
@@ -83,7 +87,7 @@ public class MainActivity extends Activity implements SurfaceTextureListener,OnC
     private WaypointMissionHeadingMode mHeadingMode = WaypointMissionHeadingMode.AUTO;
     private WaypointMission mission;
     private FlightController mFlightController;
-
+    private Compass mCompass;
     private EditText Distance, NBPoints;
     private double droneLocationLat = 181, droneLocationLng = 181;
 
@@ -174,8 +178,8 @@ public class MainActivity extends Activity implements SurfaceTextureListener,OnC
         // init mVideoSurface
         mVideoSurface = (TextureView)findViewById(R.id.video_previewer_surface);
 
-        mCaptureBtn = (Button) findViewById(R.id.btn_capture);
-        mRecordBtn = (ToggleButton) findViewById(R.id.btn_record);
+        mTakeOff = (Button) findViewById(R.id.btn_takeoff);
+        mLanding = (Button) findViewById(R.id.btn_landing);
         mWaypointMissionBtn = (Button) findViewById(R.id.btn_waypoint_mission);
         mStopBtn = (Button) findViewById(R.id.btn_stop);
 
@@ -185,22 +189,11 @@ public class MainActivity extends Activity implements SurfaceTextureListener,OnC
             mVideoSurface.setSurfaceTextureListener(this);
         }
 
-        mCaptureBtn.setOnClickListener(this);
-        mRecordBtn.setOnClickListener(this);
+        mTakeOff.setOnClickListener(this);
+        mLanding.setOnClickListener(this);
         mWaypointMissionBtn.setOnClickListener(this);
         mStopBtn.setOnClickListener(this);
 
-
-        mRecordBtn.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
-                    startRecord();
-                } else {
-                    stopRecord();
-                }
-            }
-        });
     }
 
     private void initFlightController() {
@@ -218,10 +211,11 @@ public class MainActivity extends Activity implements SurfaceTextureListener,OnC
                 @Override
                 public void onUpdate(FlightControllerState djiFlightControllerCurrentState) {
                     droneLocationLat = djiFlightControllerCurrentState.getAircraftLocation().getLatitude();
-                    droneLocationLng = djiFlightControllerCurrentState.getAircraftLocation().getLongitude();
+                    droneLocationLng = djiFlightControllerCurrentState.getAircraftLocation().getLongitude();;
                 }
             });
         }
+
     }
     private void initPreviewer() {
 
@@ -287,16 +281,24 @@ public class MainActivity extends Activity implements SurfaceTextureListener,OnC
     public void onClick(View v) {
 
         switch (v.getId()) {
-            case R.id.btn_capture:{
-//                showToast(Distance.getText().toString() + " || " + NBPoints.getText().toString());
-//                captureAction();
-                if (mFlightController != null) {
+            case R.id.btn_takeoff:{
+                showToast("Take Off");
+              if (mFlightController != null){
+                  mFlightController.turnOnMotors(new CommonCallbacks.CompletionCallback() {
+                      @Override
+                      public void onResult(DJIError djiError) {
+                          if (djiError != null) {
+                              showToast(djiError.getDescription());
+                          } else {
+                              showToast("Turn On Motors Success");
+                          }
+                      }
+                  });
                     mFlightController.startTakeoff(
                             new CommonCallbacks.CompletionCallback() {
                                 @Override
                                 public void onResult(DJIError djiError) {
                                     if (djiError != null) {
-                                        showToast("aezc");
                                         showToast(djiError.getDescription());
                                     } else {
                                         showToast("Take off Success");
@@ -304,39 +306,52 @@ public class MainActivity extends Activity implements SurfaceTextureListener,OnC
                                 }
                             }
                     );
-
-                    break;
-                } else { showToast("null"); }
+                }
+                break;
             }
-            case R.id.btn_waypoint_mission:{
-                //startWaypointMission();
 
-                if (mFlightController != null){
+            case R.id.btn_landing:{
+                showToast("Landing");
+                if (mFlightController != null) {
 
                     mFlightController.startLanding(
                             new CommonCallbacks.CompletionCallback() {
                                 @Override
                                 public void onResult(DJIError djiError) {
                                     if (djiError != null) {
-                                        showToast("aezc");
                                         showToast(djiError.getDescription());
                                     } else {
                                         showToast("Start Landing");
                                     }
                                 }
-
                             }
                     );
-
-                } else {
-                    showToast("null");
                 }
-
 
                 break;
             }
+
+            case R.id.btn_waypoint_mission:{
+                showToast("Waypoint Mission");
+                //startWaypointMission();
+
+                break;
+            }
+
             case R.id.btn_stop:{
-                stopWaypointMission();
+                showToast("Stop");
+                //
+                mFlightController.turnOffMotors(new CommonCallbacks.CompletionCallback() {
+                    @Override
+                    public void onResult(DJIError djiError) {
+                        if (djiError != null) {
+                            showToast(djiError.getDescription());
+                        } else {
+                            showToast("Turn Off Motors Sucess");
+                        }
+                    }
+                });
+
                 break;
             }
             default:
@@ -425,54 +440,42 @@ public class MainActivity extends Activity implements SurfaceTextureListener,OnC
         return instance;
     }
 
-//    private WaypointMission createWaypointMission() {
-//        LocationCoordinate3D dronePosition = mFlightController.getState().getAircraftLocation();
-//        double longitudeee = dronePosition.getLongitude();
-//        double latitude = dronePosition.getLatitude();
-//        double altitude = dronePosition.getAltitude();
-//
-//
-//        WaypointMission.Builder builder = new WaypointMission.Builder();
-//        double baseLatitude = 22;
-//        double baseLongitude = 113;
-//
-//        Object latitudeValue = KeyManager.getInstance().getValue((FlightControllerKey.create(AIRCRAFT_LOCATION_LATITUDE)));
-//        Object longitudeValue = KeyManager.getInstance().getValue((FlightControllerKey.create(AIRCRAFT_LOCATION_LONGITUDE)));
-//        if (latitudeValue != null && latitudeValue instanceof Double) {
-//            baseLatitude = (double) latitudeValue;
-//        }
-//        if (longitudeValue != null && longitudeValue instanceof Double) {
-//            baseLongitude = (double) longitudeValue;
-//        }
-//
-//        final float baseAltitude = 20.0f;
-//        builder.autoFlightSpeed(5f);
-//        builder.maxFlightSpeed(10f);
-//        builder.setExitMissionOnRCSignalLostEnabled(false);
-//        builder.finishedAction(WaypointMissionFinishedAction.NO_ACTION);
-//        builder.flightPathMode(WaypointMissionFlightPathMode.NORMAL);
-//        builder.gotoFirstWaypointMode(WaypointMissionGotoWaypointMode.SAFELY);
-//        builder.headingMode(WaypointMissionHeadingMode.AUTO);
-//        builder.repeatTimes(1);
-//
-//        List<Waypoint> waypointList = new ArrayList<>();
-//        int numberOfWaypoint = coordinates.size();
-//        for (int i = 0; i < numberOfWaypoint; i++) {
-//            final Waypoint eachWaypoint = new Waypoint(baseLatitude + coordinates.elementAt(i).first.first,
-//                    /*latitude, double*/ baseLongitude + coordinates.elementAt(i).first.second, /*longitude, double*/
-//                    coordinates.elementAt(i).second.first); /*altitude, float*/
-//            /* action of each waypoint */
-//            eachWaypoint.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, coordinates.elementAt(i).second.second));
-//            eachWaypoint.addAction(new WaypointAction(WaypointActionType.GIMBAL_PITCH, coordinates.elementAt(i).second.second));
-//            eachWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO, 1));
-//            waypointList.add(eachWaypoint);
-//        }
-//        builder.waypointList(waypointList).waypointCount(waypointList.size());
-//        return builder.build();
-//    }
+ /*   private WaypointMission createWaypointMission() {
+        LocationCoordinate3D dronePosition = mFlightController.getState().getAircraftLocation();
+        double longitude = dronePosition.getLongitude();
+        double latitude = dronePosition.getLatitude();
+        double altitude = dronePosition.getAltitude();
+
+
+        WaypointMission.Builder builder = new WaypointMission.Builder();
+
+        final float baseAltitude = 20.0f;
+        builder.autoFlightSpeed(5f);
+        builder.maxFlightSpeed(10f);
+        builder.setExitMissionOnRCSignalLostEnabled(false);
+        builder.finishedAction(WaypointMissionFinishedAction.NO_ACTION);
+        builder.flightPathMode(WaypointMissionFlightPathMode.NORMAL);
+        builder.gotoFirstWaypointMode(WaypointMissionGotoWaypointMode.SAFELY);
+        builder.headingMode(WaypointMissionHeadingMode.AUTO);
+        builder.repeatTimes(1);
+
+        List<Waypoint> waypointList = new ArrayList<>();
+        int numberOfWaypoint = coordinates.size();
+        for (int i = 0; i < numberOfWaypoint; i++) {
+            final Waypoint eachWaypoint = new Waypoint(baseLatitude + coordinates.elementAt(i).first.first,
+                    *//*latitude, double*//* baseLongitude + coordinates.elementAt(i).first.second, *//*longitude, double*//*
+                    coordinates.elementAt(i).second.first); *//*altitude, float*//*
+            *//* action of each waypoint *//*
+            eachWaypoint.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, coordinates.elementAt(i).second.second));
+            eachWaypoint.addAction(new WaypointAction(WaypointActionType.GIMBAL_PITCH, coordinates.elementAt(i).second.second));
+            eachWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO, 1));
+            waypointList.add(eachWaypoint);
+        }
+        builder.waypointList(waypointList).waypointCount(waypointList.size());
+        return builder.build();
+    }*/
 
     private void startWaypointMission(){
-        getWaypointMissionOperator().loadMission(mission);
         getWaypointMissionOperator().startMission(new CommonCallbacks.CompletionCallback() {
             @Override
             public void onResult(DJIError error) {
