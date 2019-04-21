@@ -440,12 +440,47 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         return instance;
     }
 
- /*   private WaypointMission createWaypointMission() {
+    /* Fonction Personelle */
+    private double radToDeg(double r){
+        return r*180/Math.PI;
+    }
+    private double degToRad(double d){
+        return d*Math.PI/180;
+    }
+    private double meterToRad(double m){
+        return ((1/60)/(180/Math.PI))*(m/1852);
+    }
+    private double RealMod(double val,double modVal){
+        double res = Math.IEEEremainder(val,modVal);
+        if(res<0)res+=modVal;
+        return res;
+    }
+
+    private Waypoint getNewPoint(Waypoint p1, double az,double raddist){
+        float altitude= p1.altitude;
+        double latitude =Math.asin(Math.sin(p1.coordinate.getLatitude())*Math.cos(raddist)+Math.cos(p1.coordinate.getLatitude())*Math.cos(raddist));
+        double longitude=RealMod(p1.coordinate.getLongitude()-(Math.atan2(Math.sin(az)*Math.sin(raddist)*Math.cos(p1.coordinate.getLatitude()),Math.cos(raddist)-Math.sin(p1.coordinate.getLatitude())*Math.sin(latitude))+Math.PI),Math.PI/2 );
+        return new Waypoint(radToDeg(latitude),radToDeg(longitude),altitude);
+    }
+    private WaypointMission createWaypointMission() {
         LocationCoordinate3D dronePosition = mFlightController.getState().getAircraftLocation();
         double longitude = dronePosition.getLongitude();
         double latitude = dronePosition.getLatitude();
-        double altitude = dronePosition.getAltitude();
+        float altitude = dronePosition.getAltitude();
 
+
+        // A changer pour le parametre a saisir dans l'app
+        int numberOfWaypoint = 20;
+        // A changer pour le parametre a saisir dans l'app
+        double rayon = 5;
+        //Position actuelle du drone (point de départ)
+        Waypoint drone=new Waypoint(latitude,longitude,altitude);
+        //orientation du drone
+        double a = mFlightController.getCompass().getHeading();
+        if(a<0) a = 180 + (180 + a);
+        a=degToRad(a);
+        //Position de l'objet
+        Waypoint centre = getNewPoint(drone, a,meterToRad(rayon));
 
         WaypointMission.Builder builder = new WaypointMission.Builder();
 
@@ -460,20 +495,23 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         builder.repeatTimes(1);
 
         List<Waypoint> waypointList = new ArrayList<>();
-        int numberOfWaypoint = coordinates.size();
+
+        List<Double> rads=new ArrayList<>();
+        double angle=(2*Math.PI/numberOfWaypoint);
+        a = a + angle + Math.PI;
+
         for (int i = 0; i < numberOfWaypoint; i++) {
-            final Waypoint eachWaypoint = new Waypoint(baseLatitude + coordinates.elementAt(i).first.first,
-                    *//*latitude, double*//* baseLongitude + coordinates.elementAt(i).first.second, *//*longitude, double*//*
-                    coordinates.elementAt(i).second.first); *//*altitude, float*//*
-            *//* action of each waypoint *//*
-            eachWaypoint.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, coordinates.elementAt(i).second.second));
-            eachWaypoint.addAction(new WaypointAction(WaypointActionType.GIMBAL_PITCH, coordinates.elementAt(i).second.second));
-            eachWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO, 1));
-            waypointList.add(eachWaypoint);
+            //Création du ième point de passage
+            Waypoint newWaypoint = getNewPoint(centre,a,meterToRad(rayon));
+            newWaypoint.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, (int)radToDeg(angle-Math.PI)));
+            //eachWaypoint.addAction(new WaypointAction(WaypointActionType.GIMBAL_PITCH, (int)radToDeg(angle-Math.PI)));
+            newWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO, 1));
+            waypointList.add(newWaypoint);
         }
+
         builder.waypointList(waypointList).waypointCount(waypointList.size());
         return builder.build();
-    }*/
+    }
 
     private void startWaypointMission(){
         getWaypointMissionOperator().startMission(new CommonCallbacks.CompletionCallback() {

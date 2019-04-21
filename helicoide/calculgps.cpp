@@ -35,7 +35,7 @@ GpsPt getP2fromP1(GpsPt p1,double az, double raddist){
   return res;
 }
 int main(){
-  cout<< setprecision(17);
+  cout<< setprecision(30);
   cout<<"nb points"<<endl;
   int uu;
   cin>>uu;
