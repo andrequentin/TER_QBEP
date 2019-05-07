@@ -88,9 +88,10 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
     private WaypointMission mission;
     private FlightController mFlightController;
     private Compass mCompass;
-    private EditText Distance, NBPoints;
+    private EditText Rayon, NBPoints;
     private double droneLocationLat = 181, droneLocationLng = 181;
 
+    private boolean inMission;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -183,7 +184,7 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         mWaypointMissionBtn = (Button) findViewById(R.id.btn_waypoint_mission);
         mStopBtn = (Button) findViewById(R.id.btn_stop);
 
-        Distance = (EditText) findViewById(R.id.Distance);
+        Rayon = (EditText) findViewById(R.id.Rayon);
         NBPoints = (EditText) findViewById(R.id.NbPoints);
         if (null != mVideoSurface) {
             mVideoSurface.setSurfaceTextureListener(this);
@@ -199,10 +200,12 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
     private void initFlightController() {
 
         BaseProduct product = DemoApplication.getProductInstance();
-        if (product != null && product.isConnected()) {
-            if (product instanceof Aircraft) {
-                mFlightController = ((Aircraft) product).getFlightController();
-            }
+        if (product != null && product.isConnected()){
+                if (product instanceof Aircraft) {
+                    mFlightController = ((Aircraft) product).getFlightController();
+                }
+        } else {
+            showToast("null");
         }
 
         if (mFlightController != null) {
@@ -279,21 +282,10 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
 
     @Override
     public void onClick(View v) {
-
         switch (v.getId()) {
             case R.id.btn_takeoff:{
                 showToast("Take Off");
               if (mFlightController != null){
-                  mFlightController.turnOnMotors(new CommonCallbacks.CompletionCallback() {
-                      @Override
-                      public void onResult(DJIError djiError) {
-                          if (djiError != null) {
-                              showToast(djiError.getDescription());
-                          } else {
-                              showToast("Turn On Motors Success");
-                          }
-                      }
-                  });
                     mFlightController.startTakeoff(
                             new CommonCallbacks.CompletionCallback() {
                                 @Override
@@ -307,6 +299,7 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
                             }
                     );
                 }
+
                 break;
             }
 
@@ -333,7 +326,8 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
 
             case R.id.btn_waypoint_mission:{
                 showToast("Waypoint Mission");
-                //startWaypointMission();
+                createWaypointMission();
+                startWaypointMission();
 
                 break;
             }
@@ -391,46 +385,6 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         }
     }
 
-    // Method for starting recording
-    private void startRecord(){
-
-        final Camera camera = DemoApplication.getCameraInstance();
-        if (camera != null) {
-            camera.startRecordVideo(new CommonCallbacks.CompletionCallback(){
-                @Override
-                public void onResult(DJIError djiError)
-                {
-                    if (djiError == null) {
-                        showToast("Record video: success");
-                    }else {
-                        showToast(djiError.getDescription());
-                    }
-                }
-            }); // Execute the startRecordVideo API
-        }
-    }
-
-    // Method for stopping recording
-    private void stopRecord(){
-
-        Camera camera = DemoApplication.getCameraInstance();
-        if (camera != null) {
-            camera.stopRecordVideo(new CommonCallbacks.CompletionCallback(){
-
-                @Override
-                public void onResult(DJIError djiError)
-                {
-                    if(djiError == null) {
-                        showToast("Stop recording: success");
-                    }else {
-                        showToast(djiError.getDescription());
-                    }
-                }
-            }); // Execute the stopRecordVideo API
-        }
-
-    }
-
     public WaypointMissionOperator getWaypointMissionOperator() {
         if (instance == null) {
             if (DJISDKManager.getInstance().getMissionControl() != null){
@@ -462,6 +416,7 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         double longitude=RealMod(p1.coordinate.getLongitude()-(Math.atan2(Math.sin(az)*Math.sin(raddist)*Math.cos(p1.coordinate.getLatitude()),Math.cos(raddist)-Math.sin(p1.coordinate.getLatitude())*Math.sin(latitude))+Math.PI),Math.PI/2 );
         return new Waypoint(radToDeg(latitude),radToDeg(longitude),altitude);
     }
+
     private WaypointMission createWaypointMission() {
         LocationCoordinate3D dronePosition = mFlightController.getState().getAircraftLocation();
         double longitude = dronePosition.getLongitude();
@@ -470,9 +425,10 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
 
 
         // A changer pour le parametre a saisir dans l'app
-        int numberOfWaypoint = 20;
+        int numberOfWaypoint = Integer.parseInt(NBPoints.getText().toString());
         // A changer pour le parametre a saisir dans l'app
-        double rayon = 5;
+        double rayon = Integer.parseInt(Rayon.getText().toString());
+
         //Position actuelle du drone (point de départ)
         Waypoint drone=new Waypoint(latitude,longitude,altitude);
         //orientation du drone
@@ -484,7 +440,7 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
 
         WaypointMission.Builder builder = new WaypointMission.Builder();
 
-        final float baseAltitude = 20.0f;
+        //final float baseAltitude = 20.0f;
         builder.autoFlightSpeed(5f);
         builder.maxFlightSpeed(10f);
         builder.setExitMissionOnRCSignalLostEnabled(false);
@@ -494,26 +450,48 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         builder.headingMode(WaypointMissionHeadingMode.AUTO);
         builder.repeatTimes(1);
 
-        List<Waypoint> waypointList = new ArrayList<>();
 
-        List<Double> rads=new ArrayList<>();
+//        List<Double> rads=new ArrayList<>();
         double angle=(2*Math.PI/numberOfWaypoint);
         a = a + angle + Math.PI;
 
-        for (int i = 0; i < numberOfWaypoint; i++) {
+        Waypoint w1 = new Waypoint(43.7680616, 3.9998177, 1);
+        Waypoint w2 = new Waypoint(43.7679570, 3.9999444,1);
+        Waypoint w3 = new Waypoint(43.7680069, 3.9999807,1);
+
+/*        for (int i = 0; i < numberOfWaypoint; i++) {
             //Création du ième point de passage
             Waypoint newWaypoint = getNewPoint(centre,a,meterToRad(rayon));
-            newWaypoint.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, (int)radToDeg(angle-Math.PI)));
+            newWaypoint.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, (int)radToDeg(angle - Math.PI)));
             //eachWaypoint.addAction(new WaypointAction(WaypointActionType.GIMBAL_PITCH, (int)radToDeg(angle-Math.PI)));
-            newWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO, 1));
-            waypointList.add(newWaypoint);
-        }
-
-        builder.waypointList(waypointList).waypointCount(waypointList.size());
+            //newWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO,1));
+            builder.addWaypoint(newWaypoint);
+        }*/
+        builder.addWaypoint(w1);
+        builder.addWaypoint(w2);
+        builder.addWaypoint(w3);
         return builder.build();
     }
 
     private void startWaypointMission(){
+        DJIError error = getWaypointMissionOperator().loadMission(createWaypointMission());
+        if (error == null) {
+            showToast("loadWaypoint succeeded");
+        } else {
+            showToast("loadWaypoint failed " + error.getDescription());
+        }
+
+        getWaypointMissionOperator().uploadMission(new CommonCallbacks.CompletionCallback() {
+            @Override
+            public void onResult(DJIError error) {
+                if (error == null) {
+                    showToast("Mission upload successfully!");
+                } else {
+                    showToast("Mission upload failed, error: " + error.getDescription() + " retrying...");
+                    getWaypointMissionOperator().retryUploadMission(null);
+                }
+            }
+        });
         getWaypointMissionOperator().startMission(new CommonCallbacks.CompletionCallback() {
             @Override
             public void onResult(DJIError error) {
@@ -531,6 +509,5 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
             }
         });
     }
-
 
 }

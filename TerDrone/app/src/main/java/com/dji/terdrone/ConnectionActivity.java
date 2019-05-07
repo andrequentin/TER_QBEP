@@ -135,11 +135,11 @@ public class ConnectionActivity extends Activity implements View.OnClickListener
                         @Override
                         public void onRegister(DJIError djiError) {
                             if (djiError == DJISDKError.REGISTRATION_SUCCESS) {
-                                showToast("Activity : Register Success");
                                 if(DJISDKManager.getInstance().startConnectionToProduct()){
                                     showToast("Connection to Product");
+
                                 } else {
-                                    showToast("No Connection to product");
+                                    //showToast("No Connection to product");
                                 }
                             } else {
                                 showToast("Activity : Register sdk fails, please check the bundle id and network connection!");
@@ -160,9 +160,8 @@ public class ConnectionActivity extends Activity implements View.OnClickListener
                             Log.d(TAG, String.format("onProductConnect newProduct:%s", baseProduct));
                             showToast("Product Connected");
                             notifyStatusChange();
-                            Intent intent = new Intent(ConnectionActivity.this, MainActivity.class);
-                            startActivity(intent);
                             refreshSDKRelativeUI();
+
                         }
                         @Override
                         public void onComponentChange(BaseProduct.ComponentKey componentKey, BaseComponent oldComponent,
@@ -294,7 +293,14 @@ public class ConnectionActivity extends Activity implements View.OnClickListener
             case R.id.btn_open: {
                 Intent intent = new Intent(this, MainActivity.class);
                 startActivity(intent);
-                break;
+                //BaseProduct product = DJISDKManager.getInstance().getProduct();
+/*                BaseProduct product = DemoApplication.getProductInstance();
+                if (product != null && product.isConnected()){
+                    showToast("not null && Connected");
+                } else {
+                    showToast("null");
+                }
+                break;*/
             }
             default:
                 break;

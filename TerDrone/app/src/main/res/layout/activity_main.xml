@@ -18,13 +18,13 @@
             android:hint="NBPoints"
             android:textSize="22dp"/>
         <EditText
-            android:id="@+id/Distance"
+            android:id="@+id/Rayon"
             android:layout_width="100dp"
             android:layout_height="50dp"
             android:ems="10"
             android:inputType="numberSigned"
             android:visibility="visible"
-            android:hint="Distance"
+            android:hint="Rayon"
             android:textSize="22dp"
             />
     </LinearLayout>
