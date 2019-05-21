@@ -776,15 +776,26 @@ void render_scene(){
 //
 // DrawSommetsCyl_Con(CalculSommetsCone(* new Point(0,0,0),5.0,10.0,nmed),nmed);
 //
- DrawSphere(* new Point(0,0,3), 3.0 , nmed,npar) ;
+ DrawSphere(* new Point(0,0,4), 2.0 , nmed,npar) ;
 int uu=30;
-Point * ps=CalculHelice(* new Point(0,0,0),5.0,6.0,2,uu);
+Point * ps=CalculHelice(* new Point(0,0,0),8.0,8.0,2,uu);
 glColor3f(1.0,0.0,1.0);
-glPointSize(6);
+glPointSize(4);
 for(int i = 0;i<uu;i++){
+glColor3f(1.0,0.0,1.0);
   glBegin(GL_POINTS);
   //printf("%f %f %f\n",ps[i].getx(),ps[i].gety(),ps[i].getz());
   glVertex3f(ps[i].getx(),ps[i].gety(),ps[i].getz());
+  glEnd();
+if(i<uu-1){
+       glBegin(GL_LINES);
+ glVertex3f(ps[i].getx(),ps[i].gety(),ps[i].getz()); glVertex3f(ps[i+1].getx(),ps[i+1].gety(),ps[i+1].getz());
+  glEnd();
+	}
+glColor3f(0.0,1.0,0.0);
+glBegin(GL_LINES);
+ glVertex3f(ps[i].getx(),ps[i].gety(),ps[i].getz()); 
+glVertex3f(0,0,4);
   glEnd();
 }
 

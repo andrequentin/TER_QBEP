@@ -373,10 +373,10 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         return res;
     }
 
-    private Waypoint getNewPoint(Waypoint p1, double az,double raddist){
+    private Waypoint getNewPoint(Waypoint p1, double az,double raddist,float alti){
         double lat=degToRad(p1.coordinate.getLatitude());
         double lng=degToRad(p1.coordinate.getLongitude());
-        float altitude= p1.altitude;
+        float altitude= p1.altitude+alti;
         double latitude =Math.asin(Math.sin(lat)*Math.cos(raddist)+Math.cos(lat)*Math.sin(raddist)*Math.cos(az));
         double longitude=RealMod(lng-(Math.atan2(Math.sin(az)*Math.sin(raddist)*Math.cos(lat),Math.cos(raddist)-Math.sin(lat)*Math.sin(latitude))+Math.PI),Math.PI/2 );
 
@@ -394,7 +394,7 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         int numberOfWaypoint = Integer.parseInt(Btn_NBPoints.getText().toString());
         double rayon = Double.parseDouble(Btn_Rayon.getText().toString());
         int NbTour = Integer.parseInt(Btn_NBRotattion.getText().toString());
-        double Altitude = Double.parseDouble(Btn_Altitude.getText().toString());
+        float Altitude = Float.parseDouble(Btn_Altitude.getText().toString());
 
         //Position actuelle du drone (point de départ)
         Waypoint drone=new Waypoint(latitude,longitude,altitude);
@@ -426,7 +426,7 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
 
        for (int i = 0; i < numberOfWaypoint; i++) {
             //Création du ième point de passage
-            Waypoint newWaypoint = getNewPoint(centre,a,meterToRad(rayon));
+            Waypoint newWaypoint = getNewPoint(centre,a*nbTour,meterToRad(rayon),(i*alti)/numberOfWaypoint);
             //newWaypoint.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, (int)radToDeg(angle - Math.PI)));
             //eachWaypoint.addAction(new WaypointAction(WaypointActionType.GIMBAL_PITCH, (int)radToDeg(angle-Math.PI)));
             //newWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO,1));
