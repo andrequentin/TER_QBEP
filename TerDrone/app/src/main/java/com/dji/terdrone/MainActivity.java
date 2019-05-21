@@ -359,13 +359,13 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
 
     /* Fonction Personelle */
     private double radToDeg(double r){
-        return r*180/Math.PI;
+        return r*180.0/Math.PI;
     }
     private double degToRad(double d){
-        return d*Math.PI/180;
+        return d*Math.PI/180.0;
     }
     private double meterToRad(double m){
-        return ((1/60)/(180/Math.PI))*(m/1852);
+        return ((1.0/60.0)/(180.0/Math.PI))*(m/1852.0);
     }
     private double RealMod(double val,double modVal){
         double res = Math.IEEEremainder(val,modVal);
@@ -379,7 +379,8 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         float altitude= p1.altitude+alti;
         double latitude =Math.asin(Math.sin(lat)*Math.cos(raddist)+Math.cos(lat)*Math.sin(raddist)*Math.cos(az));
         double longitude=RealMod(lng-(Math.atan2(Math.sin(az)*Math.sin(raddist)*Math.cos(lat),Math.cos(raddist)-Math.sin(lat)*Math.sin(latitude))+Math.PI),Math.PI/2 );
-
+        showToast("az : " + az);
+        showToast("lat : "+radToDeg(latitude) + " long : " +radToDeg(longitude) + " alt : " + altitude );
         Waypoint w = new Waypoint(radToDeg(latitude),radToDeg(longitude),altitude);
 
         return w;
@@ -394,16 +395,20 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         int numberOfWaypoint = Integer.parseInt(Btn_NBPoints.getText().toString());
         double rayon = Double.parseDouble(Btn_Rayon.getText().toString());
         int NbTour = Integer.parseInt(Btn_NBRotattion.getText().toString());
-        float Altitude = Float.parseDouble(Btn_Altitude.getText().toString());
+        float Altitude = Float.parseFloat(Btn_Altitude.getText().toString());
 
         //Position actuelle du drone (point de départ)
         Waypoint drone=new Waypoint(latitude,longitude,altitude);
         //orientation du drone
         double a = mFlightController.getCompass().getHeading();
-        if(a<0) a = 180 + (180 + a);
+        //if(a<0) a = 180 + (180 + a);
+       // showToast(" a : "+ a);
+
         a=degToRad(a);
+       // showToast(" a : "+ a);
+
         //Position de l'objet
-        Waypoint centre = getNewPoint(drone, a,meterToRad(rayon));
+        Waypoint centre = getNewPoint(drone, a,meterToRad(rayon),altitude);
 
         WaypointMission.Builder builder = new WaypointMission.Builder();
 
@@ -419,17 +424,20 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
 
 
 //        List<Double> rads=new ArrayList<>();
+       // showToast(" a : "+ a);
         double angle=(2*Math.PI/numberOfWaypoint);
         a = a + angle + Math.PI;
 
 
 
        for (int i = 0; i < numberOfWaypoint; i++) {
+           a=a%(Math.PI*2);
             //Création du ième point de passage
-            Waypoint newWaypoint = getNewPoint(centre,a*nbTour,meterToRad(rayon),(i*alti)/numberOfWaypoint);
-            //newWaypoint.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, (int)radToDeg(angle - Math.PI)));
+            Waypoint newWaypoint = getNewPoint(centre,a*(double)NbTour,meterToRad(rayon),(i*Altitude)/numberOfWaypoint);
+            newWaypoint.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, (int)radToDeg( Math.PI)));
             //eachWaypoint.addAction(new WaypointAction(WaypointActionType.GIMBAL_PITCH, (int)radToDeg(angle-Math.PI)));
-            //newWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO,1));
+            newWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO,1));
+           a=a+angle;
             builder.addWaypoint(newWaypoint);
         }
 
