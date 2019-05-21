@@ -64,7 +64,7 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
     private WaypointMissionFinishedAction mFinishedAction = WaypointMissionFinishedAction.GO_FIRST_WAYPOINT;
     private WaypointMissionHeadingMode mHeadingMode = WaypointMissionHeadingMode.AUTO;
 
-    private EditText Rayon, NBPoints;
+    private EditText Btn_Rayon, Btn_NBPoints, Btn_Altitude, Btn_NBRotattion;
     private double droneLocationLat = 181, droneLocationLng = 181;
 
     private boolean mission = false;
@@ -153,17 +153,20 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
 
     private void initUI() {
         // init mVideoSurface
-        mVideoSurface = (TextureView)findViewById(R.id.video_previewer_surface);
+        mVideoSurface = findViewById(R.id.video_previewer_surface);
 
-        mTakeOff = (Button) findViewById(R.id.btn_takeoff);
-        mLanding = (Button) findViewById(R.id.btn_landing);
-        mWaypointMissionBtn = (Button) findViewById(R.id.btn_waypoint_mission);
-        mStopBtn = (Button) findViewById(R.id.btn_stop);
-        mLoadButton = (Button) findViewById(R.id.btn_loadMission);
-        mTypeMission = (ToggleButton) findViewById(R.id.type_mission);
+        mTakeOff = findViewById(R.id.btn_takeoff);
+        mLanding = findViewById(R.id.btn_landing);
+        mWaypointMissionBtn =  findViewById(R.id.btn_waypoint_mission);
+        mStopBtn = findViewById(R.id.btn_stop);
+        mLoadButton = findViewById(R.id.btn_loadMission);
+        mTypeMission = findViewById(R.id.type_mission);
 
-        Rayon = (EditText) findViewById(R.id.Rayon);
-        NBPoints = (EditText) findViewById(R.id.NbPoints);
+        Btn_Rayon = findViewById(R.id.Rayon);
+        Btn_NBPoints = findViewById(R.id.NbPoints);
+        Btn_Altitude = findViewById(R.id.altitude);
+        Btn_NBRotattion = findViewById(R.id.nbTour);
+
         if (null != mVideoSurface) {
             mVideoSurface.setSurfaceTextureListener(this);
         }
@@ -388,11 +391,10 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         double latitude = dronePosition.getLatitude();
         float altitude = dronePosition.getAltitude();
 
-
-        // A changer pour le parametre a saisir dans l'app
-        int numberOfWaypoint = Integer.parseInt(NBPoints.getText().toString());
-        // A changer pour le parametre a saisir dans l'app
-        double rayon = Integer.parseInt(Rayon.getText().toString());
+        int numberOfWaypoint = Integer.parseInt(Btn_NBPoints.getText().toString());
+        double rayon = Double.parseDouble(Btn_Rayon.getText().toString());
+        int NbTour = Integer.parseInt(Btn_NBRotattion.getText().toString());
+        double Altitude = Double.parseDouble(Btn_Altitude.getText().toString());
 
         //Position actuelle du drone (point de départ)
         Waypoint drone=new Waypoint(latitude,longitude,altitude);
