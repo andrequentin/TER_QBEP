@@ -320,13 +320,6 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
 
             case R.id.btn_loadMission:{
                 showToast("Load Waypoint Mission");
-                if(mission) {
-                    showToast("Button Mission Manual");
-                    createWaypointMissionManual();
-                } else {
-                    showToast("Button Mission Auto");
-                    createWaypointMissionAuto();
-                }
                 loadWaypointMission();
                 break;
             }
@@ -379,8 +372,8 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         float altitude= p1.altitude+alti;
         double latitude =Math.asin(Math.sin(lat)*Math.cos(raddist)+Math.cos(lat)*Math.sin(raddist)*Math.cos(az));
         double longitude=RealMod(lng-(Math.atan2(Math.sin(az)*Math.sin(raddist)*Math.cos(lat),Math.cos(raddist)-Math.sin(lat)*Math.sin(latitude))+Math.PI),Math.PI/2 );
-        showToast("az : " + az);
-        showToast("lat : "+radToDeg(latitude) + " long : " +radToDeg(longitude) + " alt : " + altitude );
+        /*showToast("az : " + az);
+        showToast("lat : "+radToDeg(latitude) + " long : " +radToDeg(longitude) + " alt : " + altitude );*/
         Waypoint w = new Waypoint(radToDeg(latitude),radToDeg(longitude),altitude);
 
         return w;
@@ -426,18 +419,23 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
 //        List<Double> rads=new ArrayList<>();
        // showToast(" a : "+ a);
         double angle=(2*Math.PI/numberOfWaypoint);
-        a = a + angle + Math.PI;
+        a = (a + angle + Math.PI);
 
-
+        int h =(int) mFlightController.getCompass().getHeading();
 
        for (int i = 0; i < numberOfWaypoint; i++) {
-           a=a%(Math.PI*2);
+           //showToast("a : "+radToDeg(a));
+           h=(h - 360*NbTour/numberOfWaypoint)%360;
+            if(h>180 )   h=h-360;
+
+            if(h<-180 )h=h+360;
+           // showToast("heading : "+h);
             //Création du ième point de passage
-            Waypoint newWaypoint = getNewPoint(centre,a*(double)NbTour,meterToRad(rayon),(i*Altitude)/numberOfWaypoint);
-            newWaypoint.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, (int)radToDeg( Math.PI)));
+            Waypoint newWaypoint = getNewPoint(centre,a,meterToRad(rayon),(i*Altitude)/numberOfWaypoint);
+            newWaypoint.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, h));
             //eachWaypoint.addAction(new WaypointAction(WaypointActionType.GIMBAL_PITCH, (int)radToDeg(angle-Math.PI)));
             newWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO,1));
-           a=a+angle;
+           a=(a+angle*NbTour)%(Math.PI*2);
             builder.addWaypoint(newWaypoint);
         }
 
@@ -478,7 +476,15 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
     }
 
     private void loadWaypointMission(){
-        DJIError error = getWaypointMissionOperator().loadMission(createWaypointMissionManual());
+        DJIError error;
+        if(mission) {
+            showToast("Button Mission Manual");
+            error = getWaypointMissionOperator().loadMission(createWaypointMissionManual());
+        } else {
+            showToast("Button Mission Auto");
+            error = getWaypointMissionOperator().loadMission(createWaypointMissionAuto());
+        }
+
         if (error == null) {
             showToast("loadWaypoint succeeded");
         } else {
