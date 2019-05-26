@@ -422,8 +422,9 @@ public class MainActivity extends FragmentActivity implements SurfaceTextureList
         Waypoint drone=new Waypoint(latitude,longitude,altitude);
         //orientation du drone
         double a = mFlightController.getCompass().getHeading();
-        //if(a<0) a = 180 + (180 + a);
         // showToast(" a : "+ a);
+        //a=a*-1;
+        if(a<0) a = 360+a;
 
         a=degToRad(a);
         // showToast(" a : "+ a);
@@ -446,28 +447,33 @@ public class MainActivity extends FragmentActivity implements SurfaceTextureList
 
 //        List<Double> rads=new ArrayList<>();
         // showToast(" a : "+ a);
-        double angle=(2*Math.PI/numberOfWaypoint);
-        a = (a + angle + Math.PI);
+        double angle=(2*Math.PI*NbTour/numberOfWaypoint);
+        a = (a + angle + Math.PI)%(2*Math.PI);
 
-        int h =(int)radToDeg(a)%360;
-        h+=180;
         for (int i = 0; i < numberOfWaypoint; i++) {
-            //showToast("a : "+radToDeg(a));
+            int h =(int)radToDeg(a);
+
+            if(h>180){
+                h = -360 + h  ;
+            }
+            h=(h+180);
+            if(h>180){
+                h = -360 + h  ;
+            }
+
+            h=h*-1;
+          //  showToast("a : "+radToDeg(a));
 
             //showToast("h : " + h );
-            if(h>180 )   h=h-360;
 
-            if(h<-180 )h=h+360;
 
-            // showToast("azi : " radToDeg(a=+" - heading : "+h);
             //Création du ième point de passage
             Waypoint newWaypoint = getNewPoint(centre,a,meterToRad(rayon),(i*Altitude)/numberOfWaypoint);
             newWaypoint.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, h));
             markWaypoint(new LatLng(newWaypoint.coordinate.getLatitude(), newWaypoint.coordinate.getLongitude()));
             //eachWaypoint.addAction(new WaypointAction(WaypointActionType.GIMBAL_PITCH, (int)radToDeg(angle-Math.PI)));
             newWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO,1));
-            a=(a+angle*NbTour)%(Math.PI*2);
-            h-=(int)radToDeg(angle);
+            a=(a+angle)%(Math.PI*2);
             builder.addWaypoint(newWaypoint);
         }
 
@@ -516,15 +522,23 @@ public class MainActivity extends FragmentActivity implements SurfaceTextureList
 
         ArrayList<Waypoint> listGPS = new ArrayList<Waypoint>();
 
-        Waypoint un = new Waypoint(43.768014, 4.000106, 0);
-        Waypoint deux = new Waypoint(43.768023, 4.000114,0);
-        Waypoint trois = new Waypoint(43.768059, 4.000073, 0);
-        Waypoint quatre = new Waypoint(43.767935, 4.000129,0);
+        Waypoint un = new Waypoint(43.768123, 4.000252, 0);
+        Waypoint deux = new Waypoint(43.768156, 4.000267,0);
+        Waypoint trois = new Waypoint(43.768188, 4.000247, 0);
+        Waypoint quatre = new Waypoint(43.768202, 4.000210,0);
+        Waypoint cinq = new Waypoint(43.768183, 4.000186, 0);
+        Waypoint six = new Waypoint(43.768158, 4.000183,0);
+        Waypoint sept = new Waypoint(43.768134, 4.000195, 0);
+        Waypoint huit = new Waypoint(43.768130, 4.000223,0);
 
         listGPS.add(un);
         listGPS.add(deux);
         listGPS.add(trois);
         listGPS.add(quatre);
+        listGPS.add(cinq);
+        listGPS.add(six);
+        listGPS.add(sept);
+        listGPS.add(huit);
 
         double distanceMax = 0.0;
 
@@ -549,7 +563,7 @@ public class MainActivity extends FragmentActivity implements SurfaceTextureList
 
         Waypoint g = getmiddle(aMax, bMax);
         double r = distanceMax/2;
-        double rSecu = 2 + r;
+        double rSecu = 3 + r;
         System.out.println("rayon = " + r);
         System.out.println("rayonSecu = " + rSecu);
 
@@ -568,11 +582,13 @@ public class MainActivity extends FragmentActivity implements SurfaceTextureList
         for(int j = 0; j < (int)Altitude; j++) {
             for (int i = 0; i < listGPS.size(); i++) {
                 double az = calculAzimut(g, listGPS.get(i));
-                double aziInverse = calculAzimut(g, listGPS.get(i));
-                aziInverse = radToDeg(aziInverse);
+                double aziInverse = calculAzimut(listGPS.get(i), g);
 
+                aziInverse = radToDeg(aziInverse);
+                if(aziInverse>180) aziInverse=-360 + aziInverse;
+                aziInverse*=-1;
                 Waypoint F = new Waypoint(0.0, 0.0, 0);
-                F = getNewPoint(g, az, meterToRad(rSecu), j + 1);
+                F = getNewPoint(g, az, meterToRad(rSecu), j + 3);
 
                 if (aziInverse > 180) aziInverse = aziInverse - 360;
 
