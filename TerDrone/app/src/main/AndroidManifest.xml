@@ -18,6 +18,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.WRITE_INTERNAL_STORAGE" />
 
     <uses-feature android:name="android.hardware.camera" />
     <uses-feature android:name="android.hardware.camera.autofocus" />
@@ -43,7 +44,12 @@
         <meta-data
             android:name="com.dji.sdk.API_KEY"
             android:value="3f5e63482fe723ab2c100c73" />
-
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyAnIrxOOqAA_-W-QgLM91kAWl0C_xnJmU8" />
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
         <!-- DJI SDK -->
 
         <activity
@@ -74,9 +80,9 @@
         </activity>
 
         <activity android:name=".MainActivity"
-            android:screenOrientation="landscape">
-
+            android:screenOrientation="portrait">
         </activity>
+
     </application>
 
 </manifest>

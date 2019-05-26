@@ -1,16 +1,23 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 27
+    compileSdkVersion 26
+    buildToolsVersion "28.0.3"
+
     defaultConfig {
+
+        ndk {
+            abiFilters 'armeabi-v7a'
+        }
+
         applicationId "com.dji.terdrone"
         minSdkVersion 19
-        targetSdkVersion 27
+        targetSdkVersion 26
         versionCode 1
         versionName "1.0"
+        //Enabling multidex support
+        multiDexEnabled true //Mention in the doc
 
-        // Enabling multidex support.
-        multiDexEnabled true
     }
     buildTypes {
         release {
@@ -18,12 +25,15 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+    packagingOptions {
+        exclude 'META-INF/rxjava.properties'
+    }
+
+    //Mention in the doc
     dexOptions {
         preDexLibraries = false
-        javaMaxHeapSize "4g"
-    }
-    lintOptions {
-        abortOnError false
+        javaMaxHeapSize "4g" // 2g should be also OK
     }
 
     packagingOptions{
@@ -36,33 +46,20 @@ android {
         doNotStrip "*/*/libFRCorkscrew.so"
         doNotStrip "*/*/libUpgradeVerify.so"
         doNotStrip "*/*/libFR.so"
-
-        pickFirst 'lib/*/libstlport_shared.so'
-        pickFirst 'lib/*/libRoadLineRebuildAPI.so'
-        pickFirst 'lib/*/libGNaviUtils.so'
-        pickFirst 'lib/*/libGNaviMapex.so'
-        pickFirst 'lib/*/libGNaviData.so'
-        pickFirst 'lib/*/libGNaviMap.so'
-        pickFirst 'lib/*/libGNaviSearch.so'
-
-        exclude '/lib/armeabi-v7a/libChineseFontPkg.so'
-        exclude 'META-INF/rxjava.properties'
     }
 }
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     testImplementation 'junit:junit:4.12'
-    implementation 'com.android.support:appcompat-v7:27.0.0'
-
+    implementation 'com.android.support:appcompat-v7:26.1.0'
+    implementation 'com.google.android.gms:play-services:9.2.0'
     implementation 'com.android.support:design:26.1.0'
     implementation 'com.android.support:multidex:1.0.1'
-
-
-
+    implementation 'com.google.android.gms:play-services-ads:9.2.0'
+    implementation 'com.google.android.gms:play-services-auth:9.2.0'
+    implementation 'com.google.android.gms:play-services-gcm:9.2.0'
 
     implementation ('com.dji:dji-sdk:4.9')
-    implementation ('com.dji:dji-uxsdk:4.9')
     compileOnly ('com.dji:dji-sdk-provided:4.9')
-
 }

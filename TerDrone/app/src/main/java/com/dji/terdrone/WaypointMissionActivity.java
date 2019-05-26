@@ -15,7 +15,6 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.TextView;
@@ -37,16 +36,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import dji.common.flightcontroller.FlightControllerState;
-import dji.common.flightcontroller.LocationCoordinate3D;
 import dji.common.mission.waypoint.Waypoint;
-import dji.common.mission.waypoint.WaypointAction;
-import dji.common.mission.waypoint.WaypointActionType;
 import dji.common.mission.waypoint.WaypointMission;
 import dji.common.mission.waypoint.WaypointMissionDownloadEvent;
 import dji.common.mission.waypoint.WaypointMissionExecutionEvent;
 import dji.common.mission.waypoint.WaypointMissionFinishedAction;
 import dji.common.mission.waypoint.WaypointMissionFlightPathMode;
-import dji.common.mission.waypoint.WaypointMissionGotoWaypointMode;
 import dji.common.mission.waypoint.WaypointMissionHeadingMode;
 import dji.common.mission.waypoint.WaypointMissionUploadEvent;
 import dji.common.useraccount.UserAccountState;
@@ -71,7 +66,7 @@ public class WaypointMissionActivity extends FragmentActivity implements View.On
 
     private boolean isAdd = false;
 
-    private double droneLocationLat = 43, droneLocationLng = 3;
+    private double droneLocationLat = 181, droneLocationLng = 181;
     private final Map<Integer, Marker> mMarkers = new ConcurrentHashMap<Integer, Marker>();
     private Marker droneMarker = null;
 
@@ -86,7 +81,6 @@ public class WaypointMissionActivity extends FragmentActivity implements View.On
     private WaypointMissionFinishedAction mFinishedAction = WaypointMissionFinishedAction.NO_ACTION;
     private WaypointMissionHeadingMode mHeadingMode = WaypointMissionHeadingMode.AUTO;
 
-    private EditText Btn_Rayon, Btn_NBPoints, Btn_Altitude, Btn_NBRotattion;
     @Override
     protected void onResume(){
         super.onResume();
@@ -100,6 +94,7 @@ public class WaypointMissionActivity extends FragmentActivity implements View.On
 
     @Override
     protected void onDestroy(){
+        unregisterReceiver(mReceiver);
         removeListener();
         super.onDestroy();
     }
@@ -130,11 +125,6 @@ public class WaypointMissionActivity extends FragmentActivity implements View.On
         upload = (Button) findViewById(R.id.upload);
         start = (Button) findViewById(R.id.start);
         stop = (Button) findViewById(R.id.stop);
-
-        Btn_Rayon = findViewById(R.id.Rayon);
-        Btn_NBPoints = findViewById(R.id.NbPoints);
-        Btn_Altitude = findViewById(R.id.altitude);
-        Btn_NBRotattion = findViewById(R.id.nbTour);
 
         locate.setOnClickListener(this);
         add.setOnClickListener(this);
@@ -170,21 +160,46 @@ public class WaypointMissionActivity extends FragmentActivity implements View.On
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(DemoApplication.FLAG_CONNECTION_CHANGE);
-
-
+        registerReceiver(mReceiver, filter);
 
         initUI();
 
-        initFlightController();
-
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
-
         mapFragment.getMapAsync(this);
 
         addListener();
 
+    }
 
+    protected BroadcastReceiver mReceiver = new BroadcastReceiver() {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            onProductConnectionChange();
+        }
+    };
+
+    private void onProductConnectionChange()
+    {
+        initFlightController();
+        loginAccount();
+    }
+
+    private void loginAccount(){
+
+        UserAccountManager.getInstance().logIntoDJIUserAccount(this,
+                new CommonCallbacks.CompletionCallbackWith<UserAccountState>() {
+                    @Override
+                    public void onSuccess(final UserAccountState userAccountState) {
+                        Log.e(TAG, "Login Success");
+                    }
+                    @Override
+                    public void onFailure(DJIError error) {
+                        setResultToToast("Login Error:"
+                                + error.getDescription());
+                    }
+                });
     }
 
     private void initFlightController() {
@@ -203,7 +218,6 @@ public class WaypointMissionActivity extends FragmentActivity implements View.On
                 public void onUpdate(FlightControllerState djiFlightControllerCurrentState) {
                     droneLocationLat = djiFlightControllerCurrentState.getAircraftLocation().getLatitude();
                     droneLocationLng = djiFlightControllerCurrentState.getAircraftLocation().getLongitude();
-                    setResultToToast(" " + droneLocationLat + " " + droneLocationLng);
                     updateDroneLocation();
                 }
             });
@@ -568,96 +582,4 @@ public class WaypointMissionActivity extends FragmentActivity implements View.On
         gMap.moveCamera(CameraUpdateFactory.newLatLng(shenzhen));
     }
 
-
-
-    private double radToDeg(double r){
-        return r*180.0/Math.PI;
-    }
-    private double degToRad(double d){
-        return d*Math.PI/180.0;
-    }
-    private double meterToRad(double m){
-        return ((1.0/60.0)/(180.0/Math.PI))*(m/1852.0);
-    }
-    private double RealMod(double val,double modVal){
-        double res = Math.IEEEremainder(val,modVal);
-        if(res<0)res+=modVal;
-        return res;
-    }
-
-    private Waypoint getNewPoint(Waypoint p1, double az,double raddist,float alti){
-        double lat=degToRad(p1.coordinate.getLatitude());
-        double lng=degToRad(p1.coordinate.getLongitude());
-        float altitude= p1.altitude+alti;
-        double latitude =Math.asin(Math.sin(lat)*Math.cos(raddist)+Math.cos(lat)*Math.sin(raddist)*Math.cos(az));
-        double longitude=RealMod(lng-(Math.atan2(Math.sin(az)*Math.sin(raddist)*Math.cos(lat),Math.cos(raddist)-Math.sin(lat)*Math.sin(latitude))+Math.PI),Math.PI/2 );
-        /*showToast("az : " + az);
-        showToast("lat : "+radToDeg(latitude) + " long : " +radToDeg(longitude) + " alt : " + altitude );*/
-        Waypoint w = new Waypoint(radToDeg(latitude),radToDeg(longitude),altitude);
-
-        return w;
-    }
-
-    private WaypointMission createWaypointMissionAuto() {
-        LocationCoordinate3D dronePosition = mFlightController.getState().getAircraftLocation();
-        double longitude = dronePosition.getLongitude();
-        double latitude = dronePosition.getLatitude();
-        float altitude = dronePosition.getAltitude();
-
-        int numberOfWaypoint = Integer.parseInt(Btn_NBPoints.getText().toString());
-        double rayon = Double.parseDouble(Btn_Rayon.getText().toString());
-        int NbTour = Integer.parseInt(Btn_NBRotattion.getText().toString());
-        float Altitude = Float.parseFloat(Btn_Altitude.getText().toString());
-
-        //Position actuelle du drone (point de départ)
-        Waypoint drone=new Waypoint(latitude,longitude,altitude);
-        //orientation du drone
-        double a = mFlightController.getCompass().getHeading();
-        //if(a<0) a = 180 + (180 + a);
-        // showToast(" a : "+ a);
-
-        a=degToRad(a);
-        // showToast(" a : "+ a);
-
-        //Position de l'objet
-        Waypoint centre = getNewPoint(drone, a,meterToRad(rayon),altitude);
-
-        WaypointMission.Builder builder = new WaypointMission.Builder();
-
-        //final float baseAltitude = 20.0f;
-        builder.autoFlightSpeed(5f);
-        builder.maxFlightSpeed(10f);
-        builder.setExitMissionOnRCSignalLostEnabled(false);
-        builder.finishedAction(WaypointMissionFinishedAction.NO_ACTION);
-        builder.flightPathMode(WaypointMissionFlightPathMode.NORMAL);
-        builder.gotoFirstWaypointMode(WaypointMissionGotoWaypointMode.SAFELY);
-        builder.headingMode(WaypointMissionHeadingMode.AUTO);
-        builder.repeatTimes(1);
-
-
-//        List<Double> rads=new ArrayList<>();
-        // showToast(" a : "+ a);
-        double angle=(2*Math.PI/numberOfWaypoint);
-        a = (a + angle + Math.PI);
-
-        int h =(int) mFlightController.getCompass().getHeading();
-
-        for (int i = 0; i < numberOfWaypoint; i++) {
-            //showToast("a : "+radToDeg(a));
-            h=(h - 360*NbTour/numberOfWaypoint)%360;
-            if(h>180 )   h=h-360;
-
-            if(h<-180 )h=h+360;
-            // showToast("heading : "+h);
-            //Création du ième point de passage
-            Waypoint newWaypoint = getNewPoint(centre,a,meterToRad(rayon),(i*Altitude)/numberOfWaypoint);
-            newWaypoint.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, h));
-            //eachWaypoint.addAction(new WaypointAction(WaypointActionType.GIMBAL_PITCH, (int)radToDeg(angle-Math.PI)));
-            newWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO,1));
-            a=(a+angle*NbTour)%(Math.PI*2);
-            builder.addWaypoint(newWaypoint);
-        }
-
-        return builder.build();
-    }
 }

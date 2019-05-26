@@ -41,7 +41,6 @@ public class ConnectionActivity extends Activity implements View.OnClickListener
     private TextView mVersionTv;
     private Button mBtnOpen;
 
-    private static BaseProduct mProduct;
     private static BaseProduct product;
 
     private Handler mHandler;

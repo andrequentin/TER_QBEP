@@ -3,7 +3,9 @@ package com.dji.terdrone;
 import android.app.Activity;
 import android.graphics.SurfaceTexture;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
+import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.TextureView;
 import android.view.View;
@@ -14,8 +16,23 @@ import android.widget.EditText;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
+
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import dji.common.camera.SettingsDefinitions;
 import dji.common.error.DJIError;
@@ -43,7 +60,7 @@ import dji.sdk.mission.waypoint.WaypointMissionOperator;
 import dji.sdk.products.Aircraft;
 import dji.sdk.sdkmanager.DJISDKManager;
 
-public class MainActivity extends Activity implements SurfaceTextureListener, View.OnClickListener {
+public class MainActivity extends FragmentActivity implements SurfaceTextureListener, View.OnClickListener, GoogleMap.OnMapClickListener, OnMapReadyCallback {
 
     private static final double ONE_METER_OFFSET = 0.00000899322;
 
@@ -68,6 +85,10 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
     private double droneLocationLat = 181, droneLocationLng = 181;
 
     private boolean mission = false;
+
+    private GoogleMap gMap;
+    private final Map<Integer, Marker> mMarkers = new ConcurrentHashMap<Integer, Marker>();
+    private Marker droneMarker = null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -90,7 +111,10 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
             }
         };
 
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map);
 
+        mapFragment.getMapAsync(this);
     }
 
     protected void onProductChange() {
@@ -153,7 +177,7 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
 
     private void initUI() {
         // init mVideoSurface
-        mVideoSurface = findViewById(R.id.video_previewer_surface);
+        //mVideoSurface = findViewById(R.id.video_previewer_surface);
 
         mTakeOff = findViewById(R.id.btn_takeoff);
         mLanding = findViewById(R.id.btn_landing);
@@ -167,9 +191,9 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         Btn_Altitude = findViewById(R.id.altitude);
         Btn_NBRotattion = findViewById(R.id.nbTour);
 
-        if (null != mVideoSurface) {
+ /*       if (null != mVideoSurface) {
             mVideoSurface.setSurfaceTextureListener(this);
-        }
+        }*/
 
         mTakeOff.setOnClickListener(this);
         mLanding.setOnClickListener(this);
@@ -195,9 +219,9 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
 
         BaseProduct product = DemoApplication.getProductInstance();
         if (product != null && product.isConnected()){
-                if (product instanceof Aircraft) {
-                    mFlightController = ((Aircraft) product).getFlightController();
-                }
+            if (product instanceof Aircraft) {
+                mFlightController = ((Aircraft) product).getFlightController();
+            }
         } else {
             showToast("null");
         }
@@ -279,7 +303,7 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         switch (v.getId()) {
             case R.id.btn_takeoff:{
                 showToast("Take Off");
-              if (mFlightController != null){
+                if (mFlightController != null){
                     mFlightController.startTakeoff(
                             new CommonCallbacks.CompletionCallback() {
                                 @Override
@@ -320,7 +344,11 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
 
             case R.id.btn_loadMission:{
                 showToast("Load Waypoint Mission");
-                loadWaypointMission();
+                try {
+                    loadWaypointMission();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 break;
             }
 
@@ -395,14 +423,14 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         //orientation du drone
         double a = mFlightController.getCompass().getHeading();
         //if(a<0) a = 180 + (180 + a);
-       // showToast(" a : "+ a);
+        // showToast(" a : "+ a);
 
         a=degToRad(a);
-       // showToast(" a : "+ a);
+        // showToast(" a : "+ a);
 
         //Position de l'objet
         Waypoint centre = getNewPoint(drone, a,meterToRad(rayon),altitude);
-
+        markWaypoint(new LatLng(centre.coordinate.getLatitude(),centre.coordinate.getLongitude()));
         WaypointMission.Builder builder = new WaypointMission.Builder();
 
         //final float baseAltitude = 20.0f;
@@ -417,40 +445,160 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
 
 
 //        List<Double> rads=new ArrayList<>();
-       // showToast(" a : "+ a);
+        // showToast(" a : "+ a);
         double angle=(2*Math.PI/numberOfWaypoint);
         a = (a + angle + Math.PI);
 
-        int h =(int) mFlightController.getCompass().getHeading();
+        int h =(int)radToDeg(a)%360;
+        h+=180;
+        for (int i = 0; i < numberOfWaypoint; i++) {
+            //showToast("a : "+radToDeg(a));
 
-       for (int i = 0; i < numberOfWaypoint; i++) {
-           //showToast("a : "+radToDeg(a));
-           h=(h - 360*NbTour/numberOfWaypoint)%360;
+            //showToast("h : " + h );
             if(h>180 )   h=h-360;
 
             if(h<-180 )h=h+360;
-           // showToast("heading : "+h);
+
+            // showToast("azi : " radToDeg(a=+" - heading : "+h);
             //Création du ième point de passage
             Waypoint newWaypoint = getNewPoint(centre,a,meterToRad(rayon),(i*Altitude)/numberOfWaypoint);
             newWaypoint.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, h));
+            markWaypoint(new LatLng(newWaypoint.coordinate.getLatitude(), newWaypoint.coordinate.getLongitude()));
             //eachWaypoint.addAction(new WaypointAction(WaypointActionType.GIMBAL_PITCH, (int)radToDeg(angle-Math.PI)));
             newWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO,1));
-           a=(a+angle*NbTour)%(Math.PI*2);
+            a=(a+angle*NbTour)%(Math.PI*2);
+            h-=(int)radToDeg(angle);
             builder.addWaypoint(newWaypoint);
         }
 
         return builder.build();
     }
 
+    private double distance(double latiA, double latiB, double longA, double longB) {
+        Double dif = longB-longA;
+        int rayon = 6378137;
+        return Math.acos((Math.sin(Math.toRadians(latiA)) * Math.sin(Math.toRadians(latiB))) + (Math.cos(Math.toRadians(latiA)) * Math.cos(Math.toRadians(latiB)) * Math.cos(Math.toRadians(dif)))) * rayon;
+    }
+
+    private Waypoint getmiddle(Waypoint a,Waypoint b){
+
+        double gLongi;
+        double gLat;
+        double N=(a.coordinate.getLongitude() + b.coordinate.getLongitude())/2;
+        if(a.coordinate.getLongitude()+b.coordinate.getLongitude() < 180){
+            gLongi = (a.coordinate.getLongitude()+b.coordinate.getLongitude())/2;
+        } else {
+            if(N<0){
+                gLongi= 180+N;
+            } else if(N>0){
+                gLongi = -180+N;
+            } else {
+                gLongi = 180.0;
+            }
+        }
+        gLat = (a.coordinate.getLatitude()+b.coordinate.getLatitude())/2;
+
+        Waypoint g = new Waypoint(gLat, gLongi, 0);
+        return g;
+    }
+
+    private double calculAzimut(Waypoint a, Waypoint b) {
+
+        double x = (Math.cos(degToRad(a.coordinate.getLatitude())) * Math.sin(degToRad(b.coordinate.getLatitude()))) - ((Math.sin(degToRad(a.coordinate.getLatitude())) * Math.cos(degToRad(b.coordinate.getLatitude())) * Math.cos(degToRad(b.coordinate.getLongitude()) - degToRad(a.coordinate.getLongitude()))));
+        double y = Math.sin(degToRad(b.coordinate.getLongitude()) - degToRad(a.coordinate.getLongitude())) * Math.cos(degToRad(b.coordinate.getLatitude()));
+
+        return 2 * Math.atan(y / (Math.sqrt(x * x + y * y) + x));
+    }
+
     private WaypointMission createWaypointMissionManual(){
-       LocationCoordinate3D dronePosition = mFlightController.getState().getAircraftLocation();
+
+        float Altitude = Float.parseFloat(Btn_Altitude.getText().toString());
+
+        ArrayList<Waypoint> listGPS = new ArrayList<Waypoint>();
+
+        Waypoint un = new Waypoint(43.768014, 4.000106, 0);
+        Waypoint deux = new Waypoint(43.768023, 4.000114,0);
+        Waypoint trois = new Waypoint(43.768059, 4.000073, 0);
+        Waypoint quatre = new Waypoint(43.767935, 4.000129,0);
+
+        listGPS.add(un);
+        listGPS.add(deux);
+        listGPS.add(trois);
+        listGPS.add(quatre);
+
+        double distanceMax = 0.0;
+
+        Waypoint aMax = null;
+        Waypoint bMax = null;
+
+        for(int i = 0; i < listGPS.size(); i++) {
+            for (int j = 0; j < listGPS.size(); j++) {
+                double tmp = distance(listGPS.get(i).coordinate.getLatitude(), listGPS.get(j).coordinate.getLatitude(),
+                        listGPS.get(i).coordinate.getLongitude(), listGPS.get(j).coordinate.getLongitude());
+                if (tmp > distanceMax) {
+                    distanceMax = tmp;
+                    aMax = new Waypoint(listGPS.get(i).coordinate.getLatitude(),
+                            listGPS.get(i).coordinate.getLongitude(),
+                            0);
+                    bMax = new Waypoint(listGPS.get(j).coordinate.getLatitude(),
+                            listGPS.get(j).coordinate.getLongitude(),
+                            0);
+                }
+            }
+        }
+
+        Waypoint g = getmiddle(aMax, bMax);
+        double r = distanceMax/2;
+        double rSecu = 2 + r;
+        System.out.println("rayon = " + r);
+        System.out.println("rayonSecu = " + rSecu);
+
+        WaypointMission.Builder builder = new WaypointMission.Builder();
+
+        //final float baseAltitude = 20.0f;
+        builder.autoFlightSpeed(5f);
+        builder.maxFlightSpeed(10f);
+        builder.setExitMissionOnRCSignalLostEnabled(false);
+        builder.finishedAction(WaypointMissionFinishedAction.NO_ACTION);
+        builder.flightPathMode(WaypointMissionFlightPathMode.NORMAL);
+        builder.gotoFirstWaypointMode(WaypointMissionGotoWaypointMode.SAFELY);
+        builder.headingMode(WaypointMissionHeadingMode.AUTO);
+        builder.repeatTimes(1);
+
+        for(int j = 0; j < (int)Altitude; j++) {
+            for (int i = 0; i < listGPS.size(); i++) {
+                double az = calculAzimut(g, listGPS.get(i));
+                double aziInverse = calculAzimut(g, listGPS.get(i));
+                aziInverse = radToDeg(aziInverse);
+
+                Waypoint F = new Waypoint(0.0, 0.0, 0);
+                F = getNewPoint(g, az, meterToRad(rSecu), j + 1);
+
+                if (aziInverse > 180) aziInverse = aziInverse - 360;
+
+                if (aziInverse < -180) aziInverse = aziInverse + 360;
+
+                markWaypoint(new LatLng(F.coordinate.getLatitude(), F.coordinate.getLongitude()));
+                F.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, (int) aziInverse));
+                F.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO, 1));
+
+                builder.addWaypoint(F);
+            }
+        }
+        return builder.build();
+    }
+
+    /*    private WaypointMission createWaypointMissionManual() throws IOException {
+*//*
+        LocationCoordinate3D dronePosition = mFlightController.getState().getAircraftLocation();
         double longitude = dronePosition.getLongitude();
         double latitude = dronePosition.getLatitude();
         float altitude = dronePosition.getAltitude();
 
+*//*
 
         //Position actuelle du drone (point de départ)
-
+        showToast("create");
         WaypointMission.Builder builder = new WaypointMission.Builder();
 
         //final float baseAltitude = 20.0f;
@@ -463,19 +611,29 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         builder.headingMode(mHeadingMode);
         builder.repeatTimes(1);
 
-        Waypoint w1 = new Waypoint(latitude, longitude + ONE_METER_OFFSET, 1);
-        Waypoint w2 = new Waypoint(latitude + ONE_METER_OFFSET,longitude + ONE_METER_OFFSET, 1);
+        Waypoint w1 = new Waypoint(30, 30, 1);
+        Waypoint w2 = new Waypoint(31,31, 1);
 
         List<Waypoint> waypointList = new ArrayList<>();
 
+        BufferedWriter waypointFile = new BufferedWriter(new FileWriter("waypointManual.txt"));
+        String state = Environment.getExternalStorageState();
+
+
         waypointList.add(w1);
         waypointList.add(w2);
+
+        waypointFile.write(w1.coordinate.getLatitude() + " " + w1.coordinate.getLongitude() + " " + w1.altitude);
+        showToast(w1.coordinate.getLatitude() + " " + w1.coordinate.getLongitude() + " " + w1.altitude);
+        waypointFile.write(w2.coordinate.getLatitude() + " " + w2.coordinate.getLongitude() + " " + w2.altitude);
+        showToast(w2.coordinate.getLatitude() + " " + w2.coordinate.getLongitude() + " " + w2.altitude);
         builder.waypointList(waypointList).waypointCount(waypointList.size());
 
         return builder.build();
-    }
+    }*/
 
-    private void loadWaypointMission(){
+
+    private void loadWaypointMission() throws IOException {
         DJIError error;
         if(mission) {
             showToast("Button Mission Manual");
@@ -528,4 +686,70 @@ public class MainActivity extends Activity implements SurfaceTextureListener, Vi
         });
     }
 
+    @Override
+    public void onMapClick(LatLng latLng) {
+
+    }
+
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        if (gMap == null) {
+            gMap = googleMap;
+            setUpMap();
+        }
+
+        LatLng shenzhen = new LatLng(22.5362, 113.9454);
+        gMap.addMarker(new MarkerOptions().position(shenzhen).title("Marker in Shenzhen"));
+        gMap.moveCamera(CameraUpdateFactory.newLatLng(shenzhen));
+
+        updateDroneLocation();
+    }
+
+    private void setUpMap() {
+        gMap.setOnMapClickListener(this);
+    }
+
+    public static boolean checkGpsCoordination(double latitude, double longitude) {
+        return (latitude > -90 && latitude < 90 && longitude > -180 && longitude < 180) && (latitude != 0f && longitude != 0f);
+    }
+
+    private void updateDroneLocation(){
+
+        LocationCoordinate3D dronePosition = mFlightController.getState().getAircraftLocation();
+        double longitude = dronePosition.getLongitude();
+        double latitude = dronePosition.getLatitude();
+        LatLng dronePos = new LatLng(latitude, longitude);
+
+        showToast(longitude + " " + latitude);
+        gMap.moveCamera(CameraUpdateFactory.newLatLng(dronePos));
+
+        //Create MarkerOptions object
+        final MarkerOptions markerOptions = new MarkerOptions();
+        markerOptions.position(dronePos);
+        markerOptions.icon(BitmapDescriptorFactory.fromResource(R.drawable.aircraft));
+
+        //gMap.addMarker(markerOptions);
+        /*
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (droneMarker != null) {
+                    droneMarker.remove();
+                }
+
+                if (checkGpsCoordination(droneLocationLat, droneLocationLng)) {
+                    droneMarker = gMap.addMarker(markerOptions);
+                }
+            }
+        });*/
+    }
+
+    private void markWaypoint(LatLng point){
+        //Create MarkerOptions object
+        MarkerOptions markerOptions = new MarkerOptions();
+        markerOptions.position(point);
+        markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
+        Marker marker = gMap.addMarker(markerOptions);
+        mMarkers.put(mMarkers.size(), marker);
+    }
 }
