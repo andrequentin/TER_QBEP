@@ -26,9 +26,11 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -407,11 +409,13 @@ public class MainActivity extends FragmentActivity implements SurfaceTextureList
         return w;
     }
 
-    private WaypointMission createWaypointMissionAuto() {
+    private WaypointMission createWaypointMissionAuto() throws FileNotFoundException {
         LocationCoordinate3D dronePosition = mFlightController.getState().getAircraftLocation();
         double longitude = dronePosition.getLongitude();
         double latitude = dronePosition.getLatitude();
         float altitude = dronePosition.getAltitude();
+
+        String filename = "waypoint.txt";
 
         int numberOfWaypoint = Integer.parseInt(Btn_NBPoints.getText().toString());
         double rayon = Double.parseDouble(Btn_Rayon.getText().toString());
@@ -423,8 +427,7 @@ public class MainActivity extends FragmentActivity implements SurfaceTextureList
         //orientation du drone
         double a = mFlightController.getCompass().getHeading();
         // showToast(" a : "+ a);
-        //a=a*-1;
-        if(a<0) a = 360+a;
+        a=a*-1;
 
         a=degToRad(a);
         // showToast(" a : "+ a);
@@ -448,17 +451,17 @@ public class MainActivity extends FragmentActivity implements SurfaceTextureList
 //        List<Double> rads=new ArrayList<>();
         // showToast(" a : "+ a);
         double angle=(2*Math.PI*NbTour/numberOfWaypoint);
-        a = (a + angle + Math.PI)%(2*Math.PI);
+        a = (a + angle + Math.PI);
 
         for (int i = 0; i < numberOfWaypoint; i++) {
             int h =(int)radToDeg(a);
+            h=(h+180);
 
-            if(h>180){
+            while(h>180){
                 h = -360 + h  ;
             }
-            h=(h+180);
-            if(h>180){
-                h = -360 + h  ;
+            while(h<-180){
+                h = 360 + h  ;
             }
 
             h=h*-1;
@@ -466,15 +469,18 @@ public class MainActivity extends FragmentActivity implements SurfaceTextureList
 
             //showToast("h : " + h );
 
-
-            //Création du ième point de passage
-            Waypoint newWaypoint = getNewPoint(centre,a,meterToRad(rayon),(i*Altitude)/numberOfWaypoint);
-            newWaypoint.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, h));
-            markWaypoint(new LatLng(newWaypoint.coordinate.getLatitude(), newWaypoint.coordinate.getLongitude()));
-            //eachWaypoint.addAction(new WaypointAction(WaypointActionType.GIMBAL_PITCH, (int)radToDeg(angle-Math.PI)));
-            newWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO,1));
-            a=(a+angle)%(Math.PI*2);
-            builder.addWaypoint(newWaypoint);
+            File file = new File()
+            InputStream inputStream = openFileInput(filename);
+            if(inputStream != null) {
+                //Création du ième point de passage
+                Waypoint newWaypoint = getNewPoint(centre, a, meterToRad(rayon), (i * Altitude) / numberOfWaypoint);
+                newWaypoint.addAction(new WaypointAction(WaypointActionType.ROTATE_AIRCRAFT, h));
+                markWaypoint(new LatLng(newWaypoint.coordinate.getLatitude(), newWaypoint.coordinate.getLongitude()));
+                //eachWaypoint.addAction(new WaypointAction(WaypointActionType.GIMBAL_PITCH, (int)radToDeg(angle-Math.PI)));
+                newWaypoint.addAction(new WaypointAction(WaypointActionType.START_TAKE_PHOTO, 1));
+                a = (a + angle) % (Math.PI * 2);
+                builder.addWaypoint(newWaypoint);
+            }
         }
 
         return builder.build();
